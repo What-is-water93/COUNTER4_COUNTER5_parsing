@@ -4,6 +4,7 @@ from IPython.display import display
 import os
 
 
+# First we need arrays containing a list of all the filenames in the subdirectories
 listOfSourceFiles_C_4 = [] 
 listOfSourceFiles_C_5 = [] # empty array, will contain to subarrays, one with the csv file names, one with the xlsx file names
 listOfExcludeFiles = []
@@ -15,7 +16,7 @@ for files in os.listdir('C_4'):
     else:
         continue
 
-print("C_4 Files: \n", listOfSourceFiles_C_4)
+print("xlsx-Dateien im C_4 Verzeichnis: \n", listOfSourceFiles_C_4, "\n")
 
 for files in os.listdir('C_5'):
     if files.endswith('.xlsx'):
@@ -30,31 +31,32 @@ for files in os.listdir('exclude'):
         continue
 
 
-print(listOfSourceFiles_C_5)
-print(listOfExcludeFiles)
+print("xlsx-Dateien im C_5 Verzeichnis: \n", listOfSourceFiles_C_5, "\n")
+print("xlsx-Dateien im exclude Verzeichnis: \n", listOfExcludeFiles, "\n")
 
 
 
-dataframe_titles_C_5 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to 
 dataframe_titles_C_4 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
+dataframe_titles_C_5 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to 
 dataframe_exclude =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
 
 
 
 
-os.chdir('C_4')
-for x in listOfSourceFiles_C_4: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
+os.chdir('C_4') # Opens C_4 directory
+for x in listOfSourceFiles_C_4: #loops through the list of files in the C_4 directory, and appends each to dataframe_titles_C_4
     print("Start parsing ",x)
     i = pd.read_excel(
         x,
-        header=7,      
+        header=7,      # Pandas starts the count with 0, unlike Excel which starts at 1 
         skiprows=[8],
         usecols = ["Title", "Publisher", "Online ISSN", "Reporting_Period_Total"], 
         )
-    dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
     print("Successfully parsed ",x)
-print("C_4 Titles \n")
-display(dataframe_titles_C_4)
+
+# print("Counter 4 Tabelle: \n")
+# display(dataframe_titles_C_4)
 os.chdir('../C_5')
 for x in listOfSourceFiles_C_5: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
     print("Start parsing ",x)
@@ -87,8 +89,8 @@ for x in listOfExcludeFiles: #loops through the list of files in the csv and xls
 
 os.chdir('../') # changes working directory to main folder 
 
-print("exclude df: \n")
-display(dataframe_exclude)
+# print("exclude df: \n")
+# display(dataframe_exclude)
 
 exludeList = dataframe_exclude["Title"].tolist() #isin()
 
@@ -98,17 +100,17 @@ master = pd.DataFrame(columns=["Title", "Publisher", "Online_ISSN", "Metric_Type
 
 master = dataframe_titles_C_4
 master = master.append(dataframe_titles_C_5)
-display(master)
-master.to_csv("master_unfiltered.csv", index=False) # Unfiltered mastertable
+print("\n Ungefilterte Mastertabelle: \n",master, "\n")
+master.to_csv("master_unfiltered.csv", index=False) # Enthält noch die Medizintitel und irrelevante Zeilen ohne Reporting_Period_Total sind noch enthalten
 master = master.loc[~master['Title'].isin(exludeList)] # Removes the titles found in files saved in the "exclude" directory
 
 
-display(master)
+#display(master)
 emptyReporting_Period_Total_values = master.loc[master['Reporting_Period_Total'].isnull(), :] # List containing the rows with empty Reporting_Period_Total
 
-
 master = master.loc[~master['Reporting_Period_Total'].isna()] # Removes rows in which Reporting_Period_Total is empty
-display(master)
+print("Finale Masterliste: \n", master, "\n")
+#display(master)
 
 master.to_csv("master_without_excluded_titles.csv", index=False)
 
