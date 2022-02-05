@@ -4,19 +4,22 @@ from IPython.display import display
 import os
 
 
-
-listOfSourceFiles = [[],[]] # empty array, will contain to subarrays, one with the csv file names, one with the xlsx file names
+listOfSourceFiles_C_4 = [] 
+listOfSourceFiles_C_5 = [] # empty array, will contain to subarrays, one with the csv file names, one with the xlsx file names
 listOfExcludeFiles = []
 
-# Comment in if you have csv source files
-# for files in os.listdir('csv/'): # listdir lists all files in a given directory
-#     if files.endswith('.csv'): # ignores non .csv files
-#         listOfSourceFiles[0].append(files) # appends the filename in the first subarray ( count starts with 0)
-#     else:
-#         continue
-for files in os.listdir('xlsx'):
+
+for files in os.listdir('C_4'):
     if files.endswith('.xlsx'):
-        listOfSourceFiles[1].append(files)
+        listOfSourceFiles_C_4.append(files)
+    else:
+        continue
+
+print("C_4 Files: \n", listOfSourceFiles_C_4)
+
+for files in os.listdir('C_5'):
+    if files.endswith('.xlsx'):
+        listOfSourceFiles_C_5.append(files)
     else:
         continue
 
@@ -27,80 +30,96 @@ for files in os.listdir('exclude'):
         continue
 
 
-print(listOfSourceFiles)
+print(listOfSourceFiles_C_5)
 print(listOfExcludeFiles)
 
-def logic(index): # returns true for even numbers, false for odd numbers
-    if index % 2 == 0:
-       return True
-    return False
+
 
 dataframe_titles_C_5 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to 
-dataframe_titles_C_4 =pd.DataFrame(columns=['Titles', 'Publisher', 'Online_ISSN',]) #Empty object, the loop below adds the Columns and Rows to it
+dataframe_titles_C_4 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
 dataframe_exclude =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
 
-## Comment this in if you want to parse .csv files
-#os.chdir('csv/') # Changes working directory to the csv subfolder
-
-# for x in listOfSourceFiles[0]: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
-#     i = pd.read_csv(
-#         x,
-#         header=6,
-#         usecols = [0, 1, 7, 10], # column number, first is 0. 0 = Title, 7 = Online_ISSN, 10 = Reporting_Period_Total
-#         #skiprows= lambda x: logic(x), # calls the logic function declared above, skips uneven row numbers (the rows with total requests)
-#         )
-#     #display(i)
-#     dataframe_titles_C_5 = dataframe_titles_C_5.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
-
-os.chdir('xlsx') #Changes working directory to the xlsx subfolder
 
 
 
-for x in listOfSourceFiles[1]: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
+os.chdir('C_4')
+for x in listOfSourceFiles_C_4: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
+    print("Start parsing ",x)
+    i = pd.read_excel(
+        x,
+        header=7,      
+        skiprows=[8],
+        usecols = ["Title", "Publisher", "Online ISSN", "Reporting_Period_Total"], 
+        )
+    dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    print("Successfully parsed ",x)
+print("C_4 Titles \n")
+display(dataframe_titles_C_4)
+os.chdir('../C_5')
+for x in listOfSourceFiles_C_5: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
+    print("Start parsing ",x)
     i = pd.read_excel(
         x,
         header=14,
-        usecols = ["Title", "Publisher", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"], # column number, first is 0. 0 = Title, 1 = Publisher, 7 = Online_ISSN, 9 = Metric_Type, 10 = Reporting_Period_Total
-        #skiprows= lambda x: logic(x), # calls the logic function declared above, skips uneven row numbers (the rows with total requests)
+        usecols = ["Title", "Publisher", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"], 
+       
         )
     dataframe_titles_C_5 = dataframe_titles_C_5.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    print("Successfully parsed ",x)
 
 
 
-
-display(dataframe_titles_C_5) # optional, shows the new table in the console
+#display(dataframe_titles_C_5) # optional, shows the new table in the console
 dataframe_titles_C_5 = dataframe_titles_C_5.loc[dataframe_titles_C_5['Metric_Type'] == "Unique_Item_Requests"] #removes all rows in which Metric_Type isnt Unique_Item_Requests
-print("Only unique_item_requests \n")
-display(dataframe_titles_C_5) # optional, shows the new table in the console
+#print("Only unique_item_requests \n")
+#display(dataframe_titles_C_5) # optional, shows the new table in the console
 
 os.chdir('../exclude')
 for x in listOfExcludeFiles: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
+    print("Start parsing ",x)
     i = pd.read_excel(
         x,
         header=0,
-        usecols = ["Title"], # column number, first is 0. 0 = Title, 1 = ISSN
-        #skiprows=0,
-        #skiprows= lambda x: logic(x), # calls the logic function declared above, skips uneven row numbers (the rows with total requests)
+        usecols = ["Title"], 
         )
-    dataframe_exclude = dataframe_exclude.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    dataframe_exclude = dataframe_exclude.append(i, ignore_index=True) # appends adds each xlsx files content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    print("Successfully parsed ",x)
+
 os.chdir('../') # changes working directory to main folder 
-#dataframe_titles_C_5 = dataframe_titles_C_5.loc[dataframe_titles_C_5['Metric_Type'] == "Unique_Item_Requests"]
+
 print("exclude df: \n")
 display(dataframe_exclude)
-dataframe_titles_C_5.to_csv("masterlist_including_medicine.csv", index=False) # writes the dataframe_titles_C_5 to a new file
-#dataframe_exclude = dataframe_exclude.loc[dataframe_exclude['Metric_Type'] == "Unique_Item_Requests"]
-#dataframe_exclude = dataframe_exclude.isin()
+
 exludeList = dataframe_exclude["Title"].tolist() #isin()
-dataframe_titles_C_5 = dataframe_titles_C_5.loc[~dataframe_titles_C_5['Title'].isin(exludeList)]
-display(dataframe_titles_C_5)
-
-dataframe_titles_C_5.to_csv("masterlist_without_medicine.csv", index=False) # writes the dataframe_titles_C_5 to a new file
 
 
 
-# print(listOfSourceFiles[0])
+master = pd.DataFrame(columns=["Title", "Publisher", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"])
+
+master = dataframe_titles_C_4
+master = master.append(dataframe_titles_C_5)
+display(master)
+master.to_csv("master_unfiltered.csv", index=False) # Unfiltered mastertable
+master = master.loc[~master['Title'].isin(exludeList)] # Removes the titles found in files saved in the "exclude" directory
+
+
+display(master)
+emptyReporting_Period_Total_values = master.loc[master['Reporting_Period_Total'].isnull(), :] # List containing the rows with empty Reporting_Period_Total
+
+
+master = master.loc[~master['Reporting_Period_Total'].isna()] # Removes rows in which Reporting_Period_Total is empty
+display(master)
+
+master.to_csv("master_without_excluded_titles.csv", index=False)
+
+print("Deleted Rows with empty Reporting_Period_Total: \n", emptyReporting_Period_Total_values)
+
+
+# Below is old unused code
+
+# print(listOfSourceFiles_C_5[0])
 # df=pd.read_csv(
-# listOfSourceFiles[0], 
+# listOfSourceFiles_C_5[0], 
 # header=6,
 # usecols = [0, 7, 9, 10],
 # skiprows= lambda x: logic(x),
@@ -108,3 +127,10 @@ dataframe_titles_C_5.to_csv("masterlist_without_medicine.csv", index=False) # wr
 # display(df)
 
 #df.to_csv("dataframe_titles_C_52.csv", index=False)
+
+# Comment in if you have csv source files
+# for files in os.listdir('csv/'): # listdir lists all files in a given directory
+#     if files.endswith('.csv'): # ignores non .csv files
+#         listOfSourceFiles_C_5[0].append(files) # appends the filename in the first subarray ( count starts with 0)
+#     else:
+#         continue
