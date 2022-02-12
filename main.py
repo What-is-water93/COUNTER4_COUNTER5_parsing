@@ -4,6 +4,7 @@ from IPython.display import display
 import os
 
 
+errorMessages= []
 # First we need arrays containing a list of all the filenames in the subdirectories
 listOfSourceFiles_C_4 = [] 
 listOfSourceFiles_C_5 = [] # empty array, will contain to subarrays, one with the csv file names, one with the xlsx file names
@@ -45,30 +46,28 @@ dataframe_exclude =pd.DataFrame() #Empty object, the loop below adds the Columns
 
 os.chdir('C_4') # Opens C_4 directory
 for x in listOfSourceFiles_C_4: #loops through the list of files in the C_4 directory, and appends each to dataframe_titles_C_4
-    print("Start parsing ",x)
-    i = pd.read_excel(
-        x,
-        header=7,      # Pandas starts the count with 0, unlike Excel which starts at 1 
-        skiprows=[8],
-        usecols = ["Title", "Publisher", "Online ISSN", "Reporting_Period_Total"], 
-        )
-    dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
-    print("Successfully parsed ",x)
+    try:
+        i = pd.read_excel(
+            x,
+            header=7,      # Pandas starts the count with 0, unlike Excel which starts at 1 
+            skiprows=[8],
+            usecols = ["Title", "Publisher", "Online ISSN", "Reporting_Period_Total"], 
+            )
+        dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
+    except Exception as e: errorMessages.append(("Error in C_4/%s:" %x, e ))
 
 # print("Counter 4 Tabelle: \n")
 # display(dataframe_titles_C_4)
 os.chdir('../C_5')
 for x in listOfSourceFiles_C_5: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
-    print("Start parsing ",x)
-    i = pd.read_excel(
-        x,
-        header=14,
-        usecols = ["Title", "Publisher", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"], 
-       
-        )
-    dataframe_titles_C_5 = dataframe_titles_C_5.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
-    print("Successfully parsed ",x)
-
+    try:
+        i = pd.read_excel(
+            x,
+            header=14,
+            usecols = ["Title", "Publisher", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"], 
+            )
+        dataframe_titles_C_5 = dataframe_titles_C_5.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    except Exception as e: errorMessages.append(("Error in C_5/%s:" %x, e ))
 
 
 #display(dataframe_titles_C_5) # optional, shows the new table in the console
@@ -77,15 +76,17 @@ dataframe_titles_C_5 = dataframe_titles_C_5.loc[dataframe_titles_C_5['Metric_Typ
 #display(dataframe_titles_C_5) # optional, shows the new table in the console
 
 os.chdir('../exclude')
+
 for x in listOfExcludeFiles: #loops through the list of files in the csv and xlsx directory, and appends each to dataframe_titles_C_5
-    print("Start parsing ",x)
-    i = pd.read_excel(
-        x,
-        header=0,
-        usecols = ["Title"], 
-        )
-    dataframe_exclude = dataframe_exclude.append(i, ignore_index=True) # appends adds each xlsx files content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
-    print("Successfully parsed ",x)
+    try:
+        i = pd.read_excel(
+            x,
+            header=0,
+            usecols = ["Title"], 
+            )
+        dataframe_exclude = dataframe_exclude.append(i, ignore_index=True) # appends adds each xlsx files content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
+    except Exception as e:  errorMessages.append(("Error in exclude/%s:" %x, e ))
+
 
 os.chdir('../') # changes working directory to main folder 
 
@@ -116,7 +117,13 @@ master.to_csv("master_without_excluded_titles.csv", index=False)
 
 print("Deleted Rows with empty Reporting_Period_Total: \n", emptyReporting_Period_Total_values)
 
+if (len(errorMessages) > 0 and len(errorMessages) < 2):
+    print("\033[0;31m", "An Error occured: \n", errorMessages, "\033[0m")
+if (len(errorMessages) > 1 ):
+    print("\033[0;31m", "Multiple Errors occured: \n", errorMessages, "\033[0m")
 
+
+#print(e)
 # Below is old unused code
 
 # print(listOfSourceFiles_C_5[0])
