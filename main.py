@@ -60,7 +60,7 @@ for x in listOfSourceFiles_C_4: #loops through the list of files in the C_4 dire
             header=7,      # Pandas starts the count with 0, unlike Excel which starts at 1 
             skiprows=[8],
             usecols = ["Title", "Publisher", "Print ISSN", "Online ISSN", "Reporting_Period_Total"], 
-            )
+            ).assign(C_4_Reportname=x)
         dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
     except Exception as e: errorMessages.append(("Error in C_4/%s:" %x, e ))
 
@@ -72,7 +72,7 @@ for x in listOfSourceFiles_C_5: #loops through the list of files in the csv and 
             x,
             header=14,
             usecols = ["Title", "Publisher", "Print_ISSN","Online_ISSN", "Metric_Type", "Reporting_Period_Total"], 
-            )
+            ).assign(C_5_Reportname=x)
         dataframe_titles_C_5 = dataframe_titles_C_5.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
     except Exception as e: errorMessages.append(("Error in C_5/%s:" %x, e ))
 
