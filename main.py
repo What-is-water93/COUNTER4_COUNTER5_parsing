@@ -118,6 +118,9 @@ emptyReporting_Period_Total_values = master.loc[master['Reporting_Period_Total']
 
 master = master.loc[~master['Reporting_Period_Total'].isna()] # Removes rows in which Reporting_Period_Total is empty
 master["Title"] = master["Title"].str.lower()
+master["Reporting_Period_Total"] = master["Reporting_Period_Total"].astype(int)  # removes trailing zero which cause issues with excel        
+
+
 print("Finale Masterliste: \n", master, "\n")
 master.to_csv("../master_without_excluded_titles.csv", index=False)
 
