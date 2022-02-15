@@ -1,5 +1,6 @@
 *.csv
 *.xlsx
-
+*.csv#
+*.xlsx#
 /Statistik
 test.py
