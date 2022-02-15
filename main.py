@@ -59,7 +59,7 @@ for x in listOfSourceFiles_C_4: #loops through the list of files in the C_4 dire
             x,
             header=7,      # Pandas starts the count with 0, unlike Excel which starts at 1 
             skiprows=[8],
-            usecols = ["Title", "Publisher", "Print ISSN", "Online ISSN", "Reporting_Period_Total"], 
+            usecols = ["Title", "Publisher", "Platform", "Print ISSN", "Online ISSN", "Reporting_Period_Total"], 
             ).assign(C_4_Reportname=x)
         dataframe_titles_C_4 = dataframe_titles_C_4.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
     except Exception as e: errorMessages.append(("Error in C_4/%s:" %x, e ))
@@ -71,7 +71,7 @@ for x in listOfSourceFiles_C_5: #loops through the list of files in the csv and 
         i = pd.read_excel(
             x,
             header=14,
-            usecols = ["Title", "Publisher", "Print_ISSN","Online_ISSN", "Metric_Type", "Reporting_Period_Total"], 
+            usecols = ["Title", "Publisher", "Platform", "Print_ISSN","Online_ISSN", "Metric_Type", "Reporting_Period_Total"], 
             ).assign(C_5_Reportname=x)
         dataframe_titles_C_5 = dataframe_titles_C_5.append(i, ignore_index=True) # appends adds each csv content to end of the dataframe_titles_C_5, ignore_index is there so he doesnt also print the original row number
     except Exception as e: errorMessages.append(("Error in C_5/%s:" %x, e ))
@@ -101,7 +101,7 @@ exludeList = dataframe_exclude["Title"].tolist() #isin()
 
 master = pd.DataFrame()
 
-dataframe_titles_C_4.columns=["Title", "Publisher", "Print_ISSN","Online_ISSN", "Reporting_Period_Total"]
+dataframe_titles_C_4.columns=["Title", "Publisher", "Platform", "Print_ISSN","Online_ISSN", "Reporting_Period_Total", "C_5_Reportname"]
 #dataframe_titles_C_4 = dataframe_titles_C_4.append(dataframe_titles_C_5)
 
 master = master.append(dataframe_titles_C_4)
@@ -117,6 +117,7 @@ master = master.loc[~master['Title'].isin(exludeList)] # Removes the titles foun
 emptyReporting_Period_Total_values = master.loc[master['Reporting_Period_Total'].isna(), :] # List containing the rows with empty Reporting_Period_Total
 
 master = master.loc[~master['Reporting_Period_Total'].isna()] # Removes rows in which Reporting_Period_Total is empty
+master["Title"] = master["Title"].str.lower()
 print("Finale Masterliste: \n", master, "\n")
 master.to_csv("../master_without_excluded_titles.csv", index=False)
 
@@ -140,7 +141,7 @@ for x in listOfSingleJournalFiles: #loops through the list of files in the singl
 
 os.chdir('../') # changes working directory to main folder 
 
-
+dataframe_single_journals["Title"] = dataframe_single_journals["Title"].str.lower()
 df_single_journals_with_ISSN = pd.DataFrame()
 df_single_journals_without_ISSN = pd.DataFrame()
 df_single_journals_with_ISSN = dataframe_single_journals.loc[~dataframe_single_journals['ISSN'].isna(), :] # List containing the rows with ISSN
