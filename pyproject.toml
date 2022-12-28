@@ -2,15 +2,15 @@
 name = "counter4-counter5-parsing"
 version = "0.2.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Ruben Aleman r.m.a.aleman@gmail.com"]
 readme = "README.md"
-packages = [{include = "counter4_counter5_parsing"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 pandas = "1.5.2"
 openpyxl = "^3.0.10"
 pylint = "^2.15.9"
+autopep8 = "^2.0.1"
 
 [tool.poetry.group.dev.dependencies]
 
