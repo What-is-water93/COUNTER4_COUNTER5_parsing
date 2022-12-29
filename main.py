@@ -1,298 +1,184 @@
-import pandas as pd
-from IPython.display import display
+"""Module providing basic os functions"""
 import os
-# openpyxl too!
+import pandas as pd
 
-#Function Declarations
+# Constants
+YEAR = 2021
+COLUMN_NAMES_C_4 = ["Title", "Publisher", "Platform", "Print ISSN", "Online ISSN", "Reporting_Period_Total"]
+COLUMN_NAMES_C_5 = ["Title", "Publisher", "Platform", "Print_ISSN", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"]
+COLUMNS_PACKAGE_FILES = ["Title_Paketliste", "Title_Master", "Online_ISSN", "Print_ISSN", "Publisher", "Platform", "Reporting_Period_Total", "Sourcefilename"]
+ERROR_COLOUR = "\033[0;31m"
+DEFAULT_COLOUR = "\033[0m"
 
-# removes rows in which the specified column is empty
-def remove_empty_rows (dataframe, column):
-    print(column)
-    dataframe = dataframe.loc[~dataframe[column].isna()]
+# Function Declarations
 
-    return dataframe
 
-    
-# parses xlsx documents, directory is a mandatory parameter and is defined relative to the directory the script is running in, the other ones are optional
-def parse_xlsx (directory,  skiprows=None, header= 0,  usecolumns = None, assign = False ):
-    listOfFiles = []
+def create_array_of_xlsx_filenames(directory: str):
+    """takes a directoryname as input and returns a list containing
+    the names of all xlsx files in that directory"""
+    names = []
+    for files in os.listdir(directory):
+        if files.endswith(".xlsx"):
+            names.append(files)
+    return names
+
+
+def parse_xlsx(directory: str, skiprows: int = None, header: int = 0, usecolumns=None, assign: bool = False):
+    """parses xlsx documents, directory is a mandatory parameter and is defined
+    relative to the directory the script is running in, the other ones are
+    optional. Rows are 0 indexed, ie. excel row number 8 is 7 for this tool"""
     dataframe = pd.DataFrame()
 
-    for files in os.listdir(directory):
-        if files.endswith('.xlsx'):
-            listOfFiles.append(files)
-        else:
-            continue
-    print(listOfFiles)
+    list_of_files = create_array_of_xlsx_filenames(directory)
+    print(list_of_files)
     os.chdir(directory)
 
-    for File in listOfFiles: 
-        #try:
+    for file in list_of_files:
+        try:
             i = pd.read_excel(
-                File,
-                header=header,      # Pandas starts the count with 0, unlike Excel which starts at 1 
+                file,
+                header=header,  # Pandas starts the count with 0, unlike Excel which starts at 1
                 skiprows=skiprows,
-                usecols = usecolumns, 
-                )
-            if assign == True:
-                i=i.assign(Sourcefilename=File) 
-            dataframe = dataframe.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
-            
-        #except Exception as e: errorMessages.append(("Error in ", directory, "/", File, ": ",  e ))
-        #print("test")
+                usecols=usecolumns,
+            )
+            if assign:
+                i = i.assign(Sourcefilename=file)
+            dataframe = dataframe.append(i, ignore_index=True)
 
+        except Exception as e:  # pylint: disable=broad-except
+            error_messages.append((f"Error in {directory}/{file}: {e}"))
     os.chdir("../")
-    
+
     return dataframe
 
 
-
-# First we need arrays containing a list of all the filenames in the subdirectories
-# listOfSourceFiles_C_4 = [] 
-# listOfSourceFiles_C_5 = [] # empty array, will contain to subarrays, one with the csv file names, one with the xlsx file names
-# listOfExcludeFiles = []
-# listOfSingleJournalFiles = []
+def remove_empty_rows(dataframe, column):
+    """removes rows where the given column is empty"""
+    return dataframe[~dataframe[column].isna()]
 
 
-# for files in os.listdir('C_4'):
-#     if files.endswith('.xlsx'):
-#         listOfSourceFiles_C_4.append(files)
-#     else:
-#         continue
+def remove_not_empty_rows(dataframe, column):
+    """removes rows where the given column is not empty"""
+    return dataframe[dataframe[column].isna()]
 
 
+def sum_jstor_reporting_period_total(dataframe):
+    """sums up the reporting_period_total values"""
+    print("\n jstor_titles \n", dataframe)  # SUM of
+    return_dataframe = pd.DataFrame({"Publisher": ["JSTOR"], "Reporting_Period_Total": [0]})
+    return_dataframe["Reporting_Period_Total"] = dataframe["Reporting_Period_Total"].sum()
+    print("SUM: \n", return_dataframe)
 
-# # for files in os.listdir('C_5'):
-#     if files.endswith('.xlsx'):
-#         listOfSourceFiles_C_5.append(files)
-#     else:
-#         continue
-
-# for files in os.listdir('exclude'):
-#     if files.endswith('.xlsx'):
-#         listOfExcludeFiles.append(files)
-#     else:
-#         continue
-
-# for files in os.listdir('single_journals'):
-#     if files.endswith('.xlsx'):
-#         listOfSingleJournalFiles.append(files)
-#     else:
-#         continue
-
-# print("xlsx-Dateien im C_4 Verzeichnis: \n", listOfSourceFiles_C_4, "\n")
-# print("xlsx-Dateien im C_5 Verzeichnis: \n", listOfSourceFiles_C_5, "\n")
-# print("xlsx-Dateien im exclude Verzeichnis: \n", listOfExcludeFiles, "\n")
-# print("xlsx-Dateien im single_journal Verzeichnis: \n", listOfSingleJournalFiles, "\n")
+    return return_dataframe
 
 
-errorMessages= []
-dataframe_titles_C_4 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
-dataframe_titles_C_5 =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to 
-dataframe_exclude =pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
-dataframe_single_journals = pd.DataFrame() #Empty object, the loop below adds the Columns and Rows to it
+def list_of_titles(directory: str):
+    """returns a list containing the values of the Title column from all xlsx documents in the given directory"""
+    dataframe = parse_xlsx(directory)
 
-dataframe_titles_C_4 = parse_xlsx("C_4", [8], 7, ["Title", "Publisher", "Platform", "Print ISSN", "Online ISSN", "Reporting_Period_Total"], assign=True)
-
-#print(dataframe_titles_C_4)
-dataframe_titles_C_5 = parse_xlsx("C_5", [], 14, ["Title", "Publisher", "Platform", "Print_ISSN","Online_ISSN", "Metric_Type", "Reporting_Period_Total"], assign=True)
-
-#display(dataframe_titles_C_5) # optional, shows the new table in the console
-
-#removes all rows in which Metric_Type isnt Unique_Item_Request
-dataframe_titles_C_5 = dataframe_titles_C_5.loc[dataframe_titles_C_5['Metric_Type'] == "Unique_Item_Requests"] 
+    return dataframe["Title"].str.lower().tolist()
 
 
-dataframe_exclude = parse_xlsx(directory="exclude")
+def calculate_print_single_journal_prices(dataframe):
+    """takes the filtered masterlist as input, calculates the single journal prices,
+    prints them and also returns a dataframe with the calculated prices"""
 
-print(dataframe_exclude)
+    dataframe_single_journals = parse_xlsx("single_journals", [], 0, ["Title", "Verlag", "Online_ISSN", f"Preis {YEAR}"])
 
+    dataframe_single_journals["Title"] = dataframe_single_journals["Title"].str.lower()
+    df_single_journals_with_issn = remove_empty_rows(dataframe_single_journals, "Online_ISSN")  # List containing the rows with ISSN
+    df_single_journals_without_issn = remove_not_empty_rows(dataframe_single_journals, "Online_ISSN")  # List containing the rows without ISSN
+    df_single_journals_without_issn.to_excel("outputs/Einzelkaufslisteneinträge ohne Online_ISSN.xlsx", index=False)
+
+    df_print_issn = \
+        df_single_journals_with_issn.merge(right=dataframe, how="inner", left_on=["Online_ISSN"], right_on=["Print_ISSN", ])
+
+    df_single_journals_with_issn = \
+        df_single_journals_with_issn.merge(right=dataframe, how="inner", left_on=["Online_ISSN"], right_on=["Online_ISSN", ])
+
+    # Removes all single journal entries without a price for 2021
+    df_single_journals_with_issn = remove_empty_rows(df_single_journals_with_issn, f"Preis {YEAR}")
+
+    # Division through 0 is possible if Reporting_Period_Total" is 0, but if Preis {YEAR}/Reporting_Period_Total is 0 it will speak for itself
+    df_single_journals_with_issn[f"Preis {YEAR}/Reporting_Period_Total"] = \
+        (df_single_journals_with_issn[f"Preis {YEAR}"]/df_single_journals_with_issn["Reporting_Period_Total"]).round(2)
+
+    df_print_issn = remove_empty_rows(df_print_issn, f"Preis {YEAR}")
+
+    df_print_issn[f"Preis {YEAR}/Reporting_Period_Total"] = \
+        (df_print_issn[f"Preis {YEAR}"]/df_print_issn["Reporting_Period_Total"]).round(2)
+    # print("print_issn matching \n", df_print_issn)
+    df_single_journals_with_issn = df_single_journals_with_issn.append(df_print_issn)
+    df_single_journals_with_issn.to_excel("outputs/Single_journal_price.xlsx", index=False)
+
+    return df_single_journals_with_issn
+
+
+def print_packages_calculate_price(dataframe):
+    """merges each package list with the masterlist and prints the resulting table.
+    Sum is not calculated because the merge often contain titles from other packages which requires a manual check"""
+    list_of_package_files = create_array_of_xlsx_filenames("packages")
+    for title in list_of_package_files:
+        try:
+            package = pd.read_excel(f"packages/{title}", usecols=["Title", "Online_ISSN"])
+            package = package.drop_duplicates(subset=["Online_ISSN"], ignore_index=True)
+            merged = package.merge(dataframe.dropna(subset=["Online_ISSN"]), on=["Online_ISSN"], how="inner", suffixes=("_Paketliste", "_Master"))
+            merged.to_excel(f"outputs/packages/{title}", columns=COLUMNS_PACKAGE_FILES, index=False)
+        except Exception as e:  # pylint: disable=broad-except
+            error_messages.append((f"Error in packages/{title}: {e}"))
+
+
+error_messages = []  # Contains errors that occured while parsing input .xlsx files with error message, directory and file
+
+dataframe_titles_C_4 = parse_xlsx("C_4", [8], 7, COLUMN_NAMES_C_4, assign=True)
+dataframe_titles_C_5 = parse_xlsx("C_5", [], 14, COLUMN_NAMES_C_5, assign=True)
+
+# removes all rows in which Metric_Type isnt Unique_Item_Request
+dataframe_titles_C_5 = dataframe_titles_C_5[dataframe_titles_C_5["Metric_Type"] == "Unique_Item_Requests"]
+
+# Columns are named differently in C_4, so I have to rename them to be the same as in the C_5 Standard
+dataframe_titles_C_4.columns = ["Title", "Publisher", "Platform", "Print_ISSN", "Online_ISSN", "Reporting_Period_Total", "Sourcefilename"]
 
 master = pd.DataFrame()
-
-# Columns are differently named in C_4, so I have to rename them to be the same as in the C_5 Standard
-dataframe_titles_C_4.columns=["Title", "Publisher", "Platform", "Print_ISSN","Online_ISSN", "Reporting_Period_Total", "Sourcefilename"]
-
-#dataframe_titles_C_4 = dataframe_titles_C_4.append(dataframe_titles_C_5)
-
 master = master.append(dataframe_titles_C_4)
 master = master.append(dataframe_titles_C_5)
 
-master_for_subject = master
-print("\n Ungefilterte Mastertabelle: \n",master, "\n")
-master.to_csv("master_unfiltered.csv", index=False) # Enthält noch die Medizintitel und irrelevante Zeilen ohne Reporting_Period_Total sind noch enthalten
-JSTOR =  master[master.Platform == "JSTOR"] 
+master.to_excel("outputs/master_unfiltered.xlsx", index=False)  # Enthält noch die Medizintitel und irrelevante Zeilen ohne Reporting_Period_Total sind noch enthalten
 
+# Calculating
+sum_JSTOR = sum_jstor_reporting_period_total(master[master.Platform == "JSTOR"])
 
-# what happens here
 # Changes the content of the "Title" column to lowercase
 master["Title"] = master["Title"].str.lower()
-dataframe_exclude["Title"] = dataframe_exclude["Title"].str.lower()
-list = dataframe_exclude["Title"].tolist()
-master = master.loc[~master['Title'].isin(list)] # Removes the titles found in files saved in the "exclude" directory
 
+# Removes the titles found in files saved in the "exclude" directory
+master_filtered = master[~master["Title"].isin(list_of_titles("exclude"))]
 
-
-emptyReporting_Period_Total_values = master.loc[master['Reporting_Period_Total'].isna(), :] # List containing the rows with empty Reporting_Period_Total
-
-# Removes rows in which Reporting_Period_Total is empty
-#master = master.loc[~master['Reporting_Period_Total'].isna()]
-master = remove_empty_rows(master, 'Reporting_Period_Total')
-
+emptyReporting_Period_Total_values = remove_not_empty_rows(master, "Reporting_Period_Total")
 print("Deleted Rows with empty Reporting_Period_Total: \n", emptyReporting_Period_Total_values, "\n")
 
+# Removes rows in which Reporting_Period_Total is empty
+master_filtered = remove_empty_rows(master_filtered, "Reporting_Period_Total")
 
-# removes trailing zero which cause issues with excel 
-master["Reporting_Period_Total"] = master["Reporting_Period_Total"].astype(int)         
+# removes trailing zero which cause issues with excel
+master_filtered["Reporting_Period_Total"] = master_filtered["Reporting_Period_Total"].astype(int)
 
+# print("Finale Masterliste: \n", master_filtered, "\n")
+master_filtered.to_excel("outputs/master_without_excluded_titles.xlsx", index=False)
 
-print("Finale Masterliste: \n", master, "\n")
-master.to_csv("master_without_excluded_titles.csv", index=False)
+single_journals_with_ISSN = calculate_print_single_journal_prices(master_filtered)
+# df_print_issn.to_csv("single_journal_print_issn.csv", index=False)
 
+# packages = pd.DataFrame()
+# packages = pd.read_excel("packages/price_packages/Pakete und Konsortien.xlsx")
 
+# Removes all entries from JSTOR from the masterlist
+master_filtered_no_jstor = master_filtered[master_filtered.Platform != "JSTOR"]
 
+print_packages_calculate_price(master_filtered_no_jstor)
 
-
-
-
-#Parsing List of Single Journals
-
-#os.chdir('./single_journals') # Opens single_journal directory
-# for x in listOfSingleJournalFiles: #loops through the list of files in the single_journal directory, and appends each to dataframe_titles_C_4
-#     try:
-#         i = pd.read_excel(
-#             x,
-#             usecols = ["Title", "Verlag", "Online_ISSN", "Preis 2021"],
-#             )
-#         dataframe_single_journals = dataframe_single_journals.append(i, ignore_index=True) # Jeder Schleifendurchlauf erweitert die Tabelle um die neuen Werte
-#     except Exception as e: errorMessages.append(("Error in single_journals/%s:" %x, e ))
-
-dataframe_single_journals = parse_xlsx("single_journals", [], 0, ["Title", "Verlag", "Online_ISSN", "Preis 2021"])
-#os.chdir('../') # changes working directory to main folder 
-
-#print(dataframe_single_journals)
-dataframe_single_journals["Title"] = dataframe_single_journals["Title"].str.lower()
-df_single_journals_with_ISSN = pd.DataFrame()
-df_single_journals_without_ISSN = pd.DataFrame()
-df_single_journals_with_ISSN = dataframe_single_journals.loc[~dataframe_single_journals['Online_ISSN'].isna(), :] # List containing the rows with ISSN
-df_single_journals_without_ISSN = dataframe_single_journals.loc[dataframe_single_journals['Online_ISSN'].isna(), :] # List containing the rows without ISSN
-df_single_journals_without_ISSN.to_csv("Einzelkaufslisteneinträge ohne Online_ISSN.csv", index=False)
-
-
-df_print_ISSN = pd.DataFrame()
-df_print_ISSN = df_single_journals_with_ISSN.merge(right=master, how="inner", left_on=["Online_ISSN"], right_on=["Print_ISSN", ] )
-
-df_single_journals_with_ISSN = df_single_journals_with_ISSN.merge(right=master, how="inner", left_on=["Online_ISSN"], right_on=["Online_ISSN", ] )
-
-# Removes all single journal entries without a price for 2021 
-df_single_journals_with_ISSN = df_single_journals_with_ISSN.loc[~df_single_journals_with_ISSN['Preis 2021'].isna()]
-
-# Division through 0 is possible if Reporting_Period_Total' is 0, but if Preis 2021/Reporting_Period_Total is 0 it will speak for itself
-df_single_journals_with_ISSN['Preis 2021/Reporting_Period_Total'] = df_single_journals_with_ISSN['Preis 2021']/df_single_journals_with_ISSN['Reporting_Period_Total']
-df_single_journals_with_ISSN['Preis 2021/Reporting_Period_Total'] = df_single_journals_with_ISSN['Preis 2021/Reporting_Period_Total'].round(2)
-print("\nMatched Online_ISSN and calculated Preis 2021/Reporting_Period_Total\n", df_single_journals_with_ISSN)
-
-
-
-
-packages = pd.DataFrame()
-packages = pd.read_excel("packages/Pakete und Konsortien.xlsx")
-
-
-
-
-
-df_print_ISSN = df_print_ISSN.loc[~df_print_ISSN['Preis 2021'].isna()]
-df_print_ISSN['Preis 2021/Reporting_Period_Total'] = df_print_ISSN['Preis 2021']/df_print_ISSN['Reporting_Period_Total']
-df_print_ISSN['Preis 2021/Reporting_Period_Total'] = df_print_ISSN['Preis 2021/Reporting_Period_Total'].round(2)
-print("print_issn matching \n",df_print_ISSN)
-#df_print_ISSN = df_print_ISSN.append(df_single_journals_with_ISSN)
-df_single_journals_with_ISSN = df_single_journals_with_ISSN.append(df_print_ISSN)
-#df_single_journals_with_ISSN = df_single_journals_with_ISSN[ "Preis 2021", "Title_y","Publisher", "Platform","Reporting_Period_Total", "Sourcefilename","Preis 2021/Reporting_Period_Total"]
-df_single_journals_with_ISSN.to_csv("Single_journal_price.csv", index=False)
-
-#df_print_ISSN.to_csv("single_journal_print_issn.csv", index=False)
-
-
-#df_single_journals_with_ISSN
-packages_exclude = packages.merge(right=df_single_journals_with_ISSN, how="inner", on="Publisher" )
-print("\nMaster 1: \n", master)
-packages_exludeList = packages_exclude["Online_ISSN"].tolist() #isin()
-
-
-#match on ISSN, remove all entries with matching ISSN 
-#master = master.loc[~master['Online_ISSN'].isin(packages_exludeList)] 
-master = master[master.Online_ISSN.isin(packages_exludeList) == False]
-print("\nMaster 2: \n", master)
-
-
-print("\n JSTOR \n",JSTOR) # SUM of
-sum_JSTOR_reporting_period_total = pd.DataFrame({"Publisher": ["JSTOR"], "Reporting_Period_Total": [0]})
-sum_JSTOR_reporting_period_total["Reporting_Period_Total"] = JSTOR["Reporting_Period_Total"].sum()
-print("SUM: \n", sum_JSTOR_reporting_period_total)
-
-
-# Remove all entries with platform = JSTOR
-master = master[master.Platform  != "JSTOR"] 
-print("\n Master 3: \n", master)
-
-# Remove all entries where publisher != publisher from packages list
-packages_publisher_list = packages["Publisher"].tolist()
-print(packages_publisher_list)
-master = master[master.Publisher.isin(packages_publisher_list) == True]
-print("\nMaster 4: \n", master)
-master.to_csv("master_publisher_packages.csv", index=False)
-
-master = master.append(sum_JSTOR_reporting_period_total, ignore_index=True)
-# Sum reporting period total for each remaining publisher
-master = master.groupby("Publisher")["Reporting_Period_Total"].sum()
-print("\nMaster 5: \n", master)
-
-# create df for each publisher calculate
-# price packages list / sum RPT
-# rounding 2 decimals after 
-#take packages as base, add columns RPT for each, and then add calculated result
-
-calculatedPricePackage = packages.merge(right=master, how="left", on="Publisher" )
-calculatedPricePackage['Preis 2021/Reporting_Period_Total'] = calculatedPricePackage["Preise 2021"]/calculatedPricePackage['Reporting_Period_Total']
-calculatedPricePackage['Preis 2021/Reporting_Period_Total'] = calculatedPricePackage['Preis 2021/Reporting_Period_Total'].round(2)
-calculatedPricePackage["Reporting_Period_Total"] = calculatedPricePackage["Reporting_Period_Total"].astype(int)
-print("\n calculatedPrice: \n", calculatedPricePackage)
-
-calculatedPricePackage.to_csv("PricePackage.csv", index=False)
-
-#Print Errors, if any
-if (len(errorMessages) > 0 and len(errorMessages) < 2):
-    print("\033[0;31m", "An Error occured: \n", errorMessages, "\033[0m")
-if (len(errorMessages) > 1 ):
-    print("\033[0;31m", "Multiple Errors occured: \n", errorMessages, "\033[0m")
-
-# print(dataframe_titles_C_5)
-# print("Dataframe_exclude: \n",dataframe_exclude)
-
-# Below is old unused code
-
-# print(listOfSourceFiles_C_5[0])
-# df=pd.read_csv(
-# listOfSourceFiles_C_5[0], 
-# header=6,
-# usecols = [0, 7, 9, 10],
-# skiprows= lambda x: logic(x),
-# )#["Title", "Online_ISSN",])# "Reporting_Period_Total"]) # only for unique item request
-# display(df)
-
-#df.to_csv("dataframe_titles_C_52.csv", index=False)
-
-# Comment in if you have csv source files
-# for files in os.listdir('csv/'): # listdir lists all files in a given directory
-#     if files.endswith('.csv'): # ignores non .csv files
-#         listOfSourceFiles_C_5[0].append(files) # appends the filename in the first subarray ( count starts with 0)
-#     else:
-#         continue
-
-# print("\n Ungefilterte master_for_subject: \n",master_for_subject, "\n")
-# master_for_subject.to_csv("master_for_subject_unfiltered.csv", index=False)
-#master_for_subject = remove_empty_rows(master_for_subject, 'Reporting_Period_Total')
-# master_for_subject.to_csv("master_for_subject_filtered.csv", index=False)
-# print("\n gefilterte master_for_subject: \n",master_for_subject, "\n")
-
+# Print Errors, if any
+if len(error_messages) == 1:
+    print(ERROR_COLOUR, "An Error occured: \n", error_messages, DEFAULT_COLOUR)  # colours as variables?
+if len(error_messages) > 1:
+    print(ERROR_COLOUR, "Multiple Errors occured: \n", error_messages, DEFAULT_COLOUR)

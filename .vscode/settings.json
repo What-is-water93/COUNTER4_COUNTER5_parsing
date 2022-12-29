@@ -1,0 +1,8 @@
+{
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    "python.linting.pylintArgs": ["--good-names=i,j,k,ex,Run,_,pk,x,y,z,e", "--max-line-length=180"],
+    "python.formatting.autopep8Args": ["--max-line-length", "180"],
+    "editor.rulers": [80,120]
+
+}
