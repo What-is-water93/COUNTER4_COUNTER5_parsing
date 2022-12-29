@@ -1,7 +1,7 @@
 # CSV_XLSX_Merge
 
 ## Prerequisites
-requires installation  pandas, openpyxl, IPython (for instance via 
+requires installation  pandas and openpyxl via 
 ```
 pip install pandas openpyxl IPython
 ```
