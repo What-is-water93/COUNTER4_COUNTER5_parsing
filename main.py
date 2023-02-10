@@ -125,12 +125,20 @@ def calculate_price_print_combo(dataframe):
 
     combo = parse_xlsx("combo_abo_prices")
     combo = remove_empty_rows(combo, "ISSN")
-    combo = combo.merge(right=dataframe, how="inner", left_on=["ISSN"], right_on=["Online_ISSN", ])
-    combo["Preis/Reporting_Period_Total"] = (combo["Preis"]/combo["Reporting_Period_Total"]).round(2)
+    online_issn = combo.merge(right=dataframe, how="inner", left_on=["ISSN"], right_on=["Online_ISSN", ])
+    print_issn = combo.merge(right=dataframe, how="inner", left_on=["ISSN"], right_on=["Print_ISSN", ])
+    # online_ISSN = online_ISSN.append(print_ISSN.drop(columns="Online_ISSN"))
+    online_issn["Preis/Reporting_Period_Total"] = (online_issn["Preis"]/online_issn["Reporting_Period_Total"]).round(2)
+    # nomos and beck use the same ISSN as online and print, leading to duplicate data if not removed
+    exclude = [f"Beck TR_J1 {YEAR}.xlsx", f"Nomos TR_J1 {YEAR}.xlsx"]
+    print_issn = print_issn.loc[~print_issn['Sourcefilename'].isin(exclude)]
+
+    print_issn["Preis/Reporting_Period_Total"] = (print_issn["Preis"]/print_issn["Reporting_Period_Total"]).round(2)
+    print_issn.to_excel("outputs/combo_print.xlsx", index=False)
 
     column_order = ['Titel', 'ISSN', 'Verlag', 'Preis', 'Reporting_Period_Total', 'Preis/Reporting_Period_Total',
                     'Bestellzeichen', 'sonst. Bemerkung', 'Publisher', 'Platform', 'Print_ISSN', 'Online_ISSN',  'Sourcefilename']
-    combo.drop(columns=["Title", "Metric_Type"]).loc[:, column_order].to_excel("outputs/combo.xlsx", index=False)
+    online_issn.drop(columns=["Title", "Metric_Type"]).loc[:, column_order].to_excel("outputs/combo.xlsx", index=False)
 
 
 def print_packages_as_xlsx(dataframe):
@@ -156,7 +164,7 @@ dataframe_titles_C_5 = parse_xlsx("C_5", ROW_TO_SKIP_C_5, HEADERS_C_5, COLUMN_NA
 dataframe_titles_C_5 = dataframe_titles_C_5[dataframe_titles_C_5["Metric_Type"] == "Unique_Item_Requests"]
 
 # Columns are named differently in C_4, so I have to rename them to be the same as in the C_5 Standard
-dataframe_titles_C_4.rename(columns={"Journal": "Title", "Print ISSN": "Print_ISSN", "ISSN": "Online_ISSN"}, inplace=True)
+dataframe_titles_C_4.rename(columns={"Journal": "Title", "Print ISSN": "Print_ISSN", "Online ISSN": "Online_ISSN"}, inplace=True)
 
 main = pd.DataFrame()
 main = main.append(dataframe_titles_C_4)

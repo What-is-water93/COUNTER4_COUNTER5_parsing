@@ -46,7 +46,10 @@ The script saves all files it generates in the outputs directory.
 - **main.xlsx**
 	- main table, contains all the parsed C_4 and C_5 report entries, on condition that they have a value for the  `reporting_period_total` column (this filters out rows where publishers added a comment in the first column but left everything else empty)
 - **combo.xlsx**
-	- this contains all entries with an ISSN number from files in the `combo_abo_prices` directory. The script matched the entries via the ISSN Number with the publisher data, adding the extra columns `reporting_period_total` and `Preis/Reporting_Period_Total` filled with the correct data.
+	- this contains all entries with an ISSN number from files in the `combo_abo_prices` directory. The script joined the entries via ISSN  on Online_ISSN with the publisher data, adding the extra columns `reporting_period_total` and `Preis/Reporting_Period_Total` filled with the correct data.
+- **combo_print.xlsx**
+	- this contains all entries with an ISSN number from files in the `combo_abo_prices` directory. The script joined the entries via ISSN  on Print_ISSN with the publisher data, adding the extra columns `reporting_period_total` and `Preis/Reporting_Period_Total` filled with the correct data.
+    Entries from 2 source files are removed, since those publisher used the same ISSN as Online and Print ISSN, leading to double matched data.
 - **Single_journal_price.xlsx**
 	- similar to combo.xslx,  the script joins on the ISSN (print and online) and adds the  `reporting_period_total` and `Preis/Reporting_Period_Total` columns.
 
