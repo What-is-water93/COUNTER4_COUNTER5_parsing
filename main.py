@@ -1,14 +1,30 @@
 """Module providing basic os functions"""
 import os
+# import pprint
 import pandas as pd
 
+# pp = pprint.PrettyPrinter(indent=4)
+
 # Constants
-YEAR = 2021
-COLUMN_NAMES_C_4 = ["Title", "Publisher", "Platform", "Print ISSN", "Online ISSN", "Reporting_Period_Total"]
+YEAR = 2022
+
+# - parameter for file parsing
+# -- C_4
+HEADERS_C_4 = 8  # row number where column headers are set, rows starts with 0 (unlike excel/libre calc, who start at 1)
+COLUMN_NAMES_C_4 = ["Journal", "Publisher", "Platform", "Print ISSN", "Online ISSN", "Reporting_Period_Total"]
+ROW_TO_SKIP_C_4 = [9]  # C_4 has a row following headers with the total requests, which has to be skipped
+
+# -- C_5
+HEADERS_C_5 = 14  # row number where column headers are set, rows starts with 0 (unlike excel/libre calc, who start at 1)
 COLUMN_NAMES_C_5 = ["Title", "Publisher", "Platform", "Print_ISSN", "Online_ISSN", "Metric_Type", "Reporting_Period_Total"]
+ROW_TO_SKIP_C_5 = []  # C_5 does not contain any irrelevant rows by default
 COLUMNS_PACKAGE_FILES = ["Title_Paketliste", "Title_Master", "Online_ISSN", "Print_ISSN", "Publisher", "Platform", "Reporting_Period_Total", "Sourcefilename"]
-ERROR_COLOUR = "\033[0;31m"
-DEFAULT_COLOUR = "\033[0m"
+
+# - Terminal output styling
+RED = "\033[0;31m"
+GREEN = '\033[92m'
+BOLD = '\033[1m'
+RESET_TERMINAL_STYLE = "\033[0m"
 
 # Function Declarations
 
@@ -30,7 +46,6 @@ def parse_xlsx(directory: str, skiprows: int = None, header: int = 0, usecolumns
     dataframe = pd.DataFrame()
 
     list_of_files = create_array_of_xlsx_filenames(directory)
-    print(list_of_files)
     os.chdir(directory)
 
     for file in list_of_files:
@@ -52,54 +67,46 @@ def parse_xlsx(directory: str, skiprows: int = None, header: int = 0, usecolumns
     return dataframe
 
 
-def remove_empty_rows(dataframe, column):
+def remove_empty_rows(dataframe, column: str):
     """removes rows where the given column is empty"""
+
     return dataframe[~dataframe[column].isna()]
 
 
-def remove_not_empty_rows(dataframe, column):
+def remove_not_empty_rows(dataframe, column: str):
     """removes rows where the given column is not empty"""
+
     return dataframe[dataframe[column].isna()]
 
 
-def sum_jstor_reporting_period_total(dataframe):
+def print_sum_of_reporting_period_total_jstor(dataframe):
     """sums up the reporting_period_total values"""
-    print("\n jstor_titles \n", dataframe)  # SUM of
-    return_dataframe = pd.DataFrame({"Publisher": ["JSTOR"], "Reporting_Period_Total": [0]})
-    return_dataframe["Reporting_Period_Total"] = dataframe["Reporting_Period_Total"].sum()
-    print("SUM: \n", return_dataframe)
 
-    return return_dataframe
+    print(BOLD, "The Reporting_Period_Total sum for JSTOR is:", GREEN, dataframe["Reporting_Period_Total"].sum().astype(int), RESET_TERMINAL_STYLE)
 
 
-def list_of_titles(directory: str):
-    """returns a list containing the values of the Title column from all xlsx documents in the given directory"""
-    dataframe = parse_xlsx(directory)
-
-    return dataframe["Title"].str.lower().tolist()
-
-
-def calculate_print_single_journal_prices(dataframe):
-    """takes the filtered masterlist as input, calculates the single journal prices,
+def calculate_price_print_single_journal(dataframe):
+    """takes the filtered mainlist as input, calculates the single journal prices,
     prints them and also returns a dataframe with the calculated prices"""
 
-    dataframe_single_journals = parse_xlsx("single_journals", [], 0, ["Title", "Verlag", "Online_ISSN", f"Preis {YEAR}"])
-
+    dataframe_single_journals = parse_xlsx("single_journals")
+    dataframe_single_journals.rename(columns={"Titel": "Title", "ISSN": "Online_ISSN"}, inplace=True)
     dataframe_single_journals["Title"] = dataframe_single_journals["Title"].str.lower()
     df_single_journals_with_issn = remove_empty_rows(dataframe_single_journals, "Online_ISSN")  # List containing the rows with ISSN
     df_single_journals_without_issn = remove_not_empty_rows(dataframe_single_journals, "Online_ISSN")  # List containing the rows without ISSN
-    df_single_journals_without_issn.to_excel("outputs/Einzelkaufslisteneinträge ohne Online_ISSN.xlsx", index=False)
+    if not df_single_journals_without_issn.empty:
+        df_single_journals_without_issn.to_excel("outputs/single_journals_without_Online_ISSN.xlsx", index=False)
 
     df_print_issn = \
         df_single_journals_with_issn.merge(right=dataframe, how="inner", left_on=["Online_ISSN"], right_on=["Print_ISSN", ])
 
     df_single_journals_with_issn = \
-        df_single_journals_with_issn.merge(right=dataframe, how="inner", left_on=["Online_ISSN"], right_on=["Online_ISSN", ])
+        df_single_journals_with_issn.merge(right=dataframe, how="inner", on=["Online_ISSN"])
 
     # Removes all single journal entries without a price for 2021
     df_single_journals_with_issn = remove_empty_rows(df_single_journals_with_issn, f"Preis {YEAR}")
 
-    # Division through 0 is possible if Reporting_Period_Total" is 0, but if Preis {YEAR}/Reporting_Period_Total is 0 it will speak for itself
+    # If the new column has the value "inf" a division through 0 took place (happens if Reporting_Period_Total = 0)
     df_single_journals_with_issn[f"Preis {YEAR}/Reporting_Period_Total"] = \
         (df_single_journals_with_issn[f"Preis {YEAR}"]/df_single_journals_with_issn["Reporting_Period_Total"]).round(2)
 
@@ -107,15 +114,27 @@ def calculate_print_single_journal_prices(dataframe):
 
     df_print_issn[f"Preis {YEAR}/Reporting_Period_Total"] = \
         (df_print_issn[f"Preis {YEAR}"]/df_print_issn["Reporting_Period_Total"]).round(2)
-    # print("print_issn matching \n", df_print_issn)
+
     df_single_journals_with_issn = df_single_journals_with_issn.append(df_print_issn)
-    df_single_journals_with_issn.to_excel("outputs/Single_journal_price.xlsx", index=False)
-
-    return df_single_journals_with_issn
+    df_single_journals_with_issn.drop(columns=["Title_y", "Metric_Type"]).to_excel("outputs/Single_journal_price.xlsx", index=False)
 
 
-def print_packages_calculate_price(dataframe):
-    """merges each package list with the masterlist and prints the resulting table.
+def calculate_price_print_combo(dataframe):
+    """calculates the price/Reporting_Period_Total with the Reporting_Period_Total
+    from mainlist and the prices from the file in the combo_abo_price directory"""
+
+    combo = parse_xlsx("combo_abo_prices")
+    combo = remove_empty_rows(combo, "ISSN")
+    combo = combo.merge(right=dataframe, how="inner", left_on=["ISSN"], right_on=["Online_ISSN", ])
+    combo["Preis/Reporting_Period_Total"] = (combo["Preis"]/combo["Reporting_Period_Total"]).round(2)
+
+    column_order = ['Titel', 'ISSN', 'Verlag', 'Preis', 'Reporting_Period_Total', 'Preis/Reporting_Period_Total',
+                    'Bestellzeichen', 'sonst. Bemerkung', 'Publisher', 'Platform', 'Print_ISSN', 'Online_ISSN',  'Sourcefilename']
+    combo.drop(columns=["Title", "Metric_Type"]).loc[:, column_order].to_excel("outputs/combo.xlsx", index=False)
+
+
+def print_packages_as_xlsx(dataframe):
+    """merges each package list with the mainlist and prints the resulting table.
     Sum is not calculated because the merge often contain titles from other packages which requires a manual check"""
     list_of_package_files = create_array_of_xlsx_filenames("packages")
     for title in list_of_package_files:
@@ -130,55 +149,50 @@ def print_packages_calculate_price(dataframe):
 
 error_messages = []  # Contains errors that occured while parsing input .xlsx files with error message, directory and file
 
-dataframe_titles_C_4 = parse_xlsx("C_4", [8], 7, COLUMN_NAMES_C_4, assign=True)
-dataframe_titles_C_5 = parse_xlsx("C_5", [], 14, COLUMN_NAMES_C_5, assign=True)
+dataframe_titles_C_4 = parse_xlsx("C_4", ROW_TO_SKIP_C_4, HEADERS_C_4, COLUMN_NAMES_C_4, assign=True)
+dataframe_titles_C_5 = parse_xlsx("C_5", ROW_TO_SKIP_C_5, HEADERS_C_5, COLUMN_NAMES_C_5, assign=True)
 
 # removes all rows in which Metric_Type isnt Unique_Item_Request
 dataframe_titles_C_5 = dataframe_titles_C_5[dataframe_titles_C_5["Metric_Type"] == "Unique_Item_Requests"]
 
 # Columns are named differently in C_4, so I have to rename them to be the same as in the C_5 Standard
-dataframe_titles_C_4.columns = ["Title", "Publisher", "Platform", "Print_ISSN", "Online_ISSN", "Reporting_Period_Total", "Sourcefilename"]
+dataframe_titles_C_4.rename(columns={"Journal": "Title", "Print ISSN": "Print_ISSN", "ISSN": "Online_ISSN"}, inplace=True)
 
-master = pd.DataFrame()
-master = master.append(dataframe_titles_C_4)
-master = master.append(dataframe_titles_C_5)
-
-master.to_excel("outputs/master_unfiltered.xlsx", index=False)  # Enthält noch die Medizintitel und irrelevante Zeilen ohne Reporting_Period_Total sind noch enthalten
+main = pd.DataFrame()
+main = main.append(dataframe_titles_C_4)
+main = main.append(dataframe_titles_C_5)
 
 # Calculating
-sum_JSTOR = sum_jstor_reporting_period_total(master[master.Platform == "JSTOR"])
 
 # Changes the content of the "Title" column to lowercase
-master["Title"] = master["Title"].str.lower()
+main["Title"] = main["Title"].str.lower()
 
-# Removes the titles found in files saved in the "exclude" directory
-master_filtered = master[~master["Title"].isin(list_of_titles("exclude"))]
-
-emptyReporting_Period_Total_values = remove_not_empty_rows(master, "Reporting_Period_Total")
-print("Deleted Rows with empty Reporting_Period_Total: \n", emptyReporting_Period_Total_values, "\n")
+# check if there are any rows without a Reporting_Period_Total value, if there are any
+# it prints the rows to STDOUT and creates the file main_with_empty_RPT with those rows
+emptyReporting_Period_Total_values = remove_not_empty_rows(main, "Reporting_Period_Total")
+if not emptyReporting_Period_Total_values.empty:
+    emptyReporting_Period_Total_values.to_excel("outputs/main_with_empty_RPT.xlsx", index=False)  # Enthält irrelevante Zeilen ohne Reporting_Period_Total
+    print("Deleted Rows with empty Reporting_Period_Total: \n", emptyReporting_Period_Total_values, "\n")
 
 # Removes rows in which Reporting_Period_Total is empty
-master_filtered = remove_empty_rows(master_filtered, "Reporting_Period_Total")
+main_filtered = remove_empty_rows(main, "Reporting_Period_Total")
 
-# removes trailing zero which cause issues with excel
-master_filtered["Reporting_Period_Total"] = master_filtered["Reporting_Period_Total"].astype(int)
+print_sum_of_reporting_period_total_jstor(main_filtered[main_filtered.Platform == "JSTOR"])
 
-# print("Finale Masterliste: \n", master_filtered, "\n")
-master_filtered.to_excel("outputs/master_without_excluded_titles.xlsx", index=False)
+main_filtered.to_excel("outputs/main.xlsx", index=False)
 
-single_journals_with_ISSN = calculate_print_single_journal_prices(master_filtered)
-# df_print_issn.to_csv("single_journal_print_issn.csv", index=False)
+calculate_price_print_single_journal(main_filtered)
 
-# packages = pd.DataFrame()
-# packages = pd.read_excel("packages/price_packages/Pakete und Konsortien.xlsx")
+# Kombiabopreise
+calculate_price_print_combo(main_filtered)
 
-# Removes all entries from JSTOR from the masterlist
-master_filtered_no_jstor = master_filtered[master_filtered.Platform != "JSTOR"]
+# Removes all entries from JSTOR from the mainlist
+main_filtered_no_jstor = main_filtered[main_filtered.Platform != "JSTOR"]
 
-print_packages_calculate_price(master_filtered_no_jstor)
+print_packages_as_xlsx(main_filtered_no_jstor)
 
 # Print Errors, if any
 if len(error_messages) == 1:
-    print(ERROR_COLOUR, "An Error occured: \n", error_messages, DEFAULT_COLOUR)  # colours as variables?
+    print(RED, "An Error occured: \n", error_messages, RESET_TERMINAL_STYLE)
 if len(error_messages) > 1:
-    print(ERROR_COLOUR, "Multiple Errors occured: \n", error_messages, DEFAULT_COLOUR)
+    print(RED, "Multiple Errors occured: \n", error_messages, RESET_TERMINAL_STYLE)
